@@ -1,6 +1,6 @@
 require "moonshine"
 require "redis"
-require "html/builder"
+require "html_builder"
 
 include Moonshine
 include Moonshine::Utils::Shortcuts
@@ -101,7 +101,7 @@ end
 # Redis Test 4: Fortunes
 app.get "/fortunes", do |request|
   data = fortunes
-  
+
   additional_fortune = {
     :id => 0,
     :message => "Additional fortune added at request time."

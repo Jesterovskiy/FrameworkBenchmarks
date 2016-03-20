@@ -1,6 +1,7 @@
 require "moonshine"
 require "pg"
-require "html/builder"
+require "pool/connection"
+require "html_builder"
 
 include Moonshine
 include Moonshine::Utils::Shortcuts
@@ -8,7 +9,9 @@ include Moonshine::Utils::Shortcuts
 # Compose Objects (like Hash) to have a to_json method
 require "json/to_json"
 
-DB = PG.connect("postgres://benchmarkdbuser:benchmarkdbpass@#{ENV["DBHOST"]? || "127.0.0.1"}/hello_world")
+DB = ConnectionPool.new(capacity: 25, timeout: 0.01) do
+  PG.connect("postgres://benchmarkdbuser:benchmarkdbpass@#{ENV["DBHOST"]? || "127.0.0.1"}/hello_world")
+end
 app = App.new
 
 class CONTENT
@@ -28,19 +31,22 @@ end
 
 private def randomWorld
   id = rand(1..ID_MAXIMUM)
-  result = DB.exec({Int32, Int32}, "SELECT id, randomNumber FROM world WHERE id = $1", [id]).rows.first
+  conn = DB.checkout
+  result = conn.exec({Int32, Int32}, "SELECT id, randomNumber FROM world WHERE id = $1", [id]).rows.first
   {:id => result[0], :randomNumber => result[1]}
 end
 
 private def setWorld(world)
-  DB.exec("UPDATE world set randomNumber = $1 where id = $2", [world[:randomNumber], world[:id]])
+  conn = DB.checkout
+  conn.exec("UPDATE world set randomNumber = $1 where id = $2", [world[:randomNumber], world[:id]])
   world
 end
 
 private def fortunes
   data = [] of  Hash(Symbol, (String | Int32))
 
-  DB.exec({Int32, String}, "select id, message from Fortune").rows.each do |row|
+  conn = DB.checkout
+  conn.exec({Int32, String}, "select id, message from Fortune").rows.each do |row|
     data.push({:id => row[0], :message => row[1]})
   end
   data
@@ -100,7 +106,7 @@ end
 # Postgres Test 4: Fortunes
 app.get "/fortunes", do |request|
   data = fortunes
-  
+
   additional_fortune = {
     :id => 0,
     :message => "Additional fortune added at request time."
