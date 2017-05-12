@@ -1,6 +1,6 @@
 ---
 _: &common
-  adapter: <%= RUBY_PLATFORM == 'java' ? 'jdbcmysql' : 'mysql2' %>
+  adapter: mysql2
   database: hello_world
   username: benchmarkdbuser
   password: benchmarkdbpass
